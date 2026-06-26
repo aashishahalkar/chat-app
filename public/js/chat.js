@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const localVideo = document.getElementById('localVideo');
   const toggleAudioBtn = document.getElementById('toggleAudioBtn');
   const toggleVideoBtn = document.getElementById('toggleVideoBtn');
+  const swapCameraBtn = document.getElementById('swapCameraBtn');
   const hangupCallBtn = document.getElementById('hangupCallBtn');
 
   const incomingCallBanner = document.getElementById('incomingCallBanner');
@@ -79,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeCall = null; // { targetId, isGroup, isVideo, role: 'caller'|'callee' }
   let callTimerInterval = null;
   let callStartTime = null;
+  let currentFacingMode = 'user';
 
   // Initialize App
   init();
@@ -442,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     declineCallBtn.addEventListener('click', declineCallRequest);
     toggleAudioBtn.addEventListener('click', toggleMute);
     toggleVideoBtn.addEventListener('click', toggleCamera);
+    swapCameraBtn.addEventListener('click', swapCamera);
     hangupCallBtn.addEventListener('click', hangupCall);
   }
 
@@ -952,11 +955,16 @@ document.addEventListener('DOMContentLoaded', () => {
     callScreenStatus.textContent = 'Ringing...';
     callOverlay.classList.remove('hidden');
 
+    // Hide video/swap buttons if audio-only
+    toggleVideoBtn.classList.toggle('hidden', !isVideo);
+    swapCameraBtn.classList.toggle('hidden', !isVideo);
+    currentFacingMode = 'user';
+
     try {
       // Capture local stream
       localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: isVideo ? { width: 640, height: 480 } : false
+        video: isVideo ? { width: 640, height: 480, facingMode: currentFacingMode } : false
       });
       localVideo.srcObject = localStream;
       localVideo.classList.toggle('hidden', !isVideo);
@@ -981,6 +989,10 @@ document.addEventListener('DOMContentLoaded', () => {
       isGroup: activeCall.isGroup,
       isVideo: isVideo
     });
+
+    // Play Ringtone
+    ringtoneSound.currentTime = 0;
+    ringtoneSound.play().catch(err => console.log("Ringtone play blocked:", err));
   }
 
   async function acceptCallRequest() {
@@ -994,11 +1006,16 @@ document.addEventListener('DOMContentLoaded', () => {
     callScreenStatus.textContent = 'Connecting...';
     callOverlay.classList.remove('hidden');
 
+    // Hide video/swap buttons if audio-only
+    toggleVideoBtn.classList.toggle('hidden', !activeCall.isVideo);
+    swapCameraBtn.classList.toggle('hidden', !activeCall.isVideo);
+    currentFacingMode = 'user';
+
     try {
       // Capture local stream
       localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: activeCall.isVideo ? { width: 640, height: 480 } : false
+        video: activeCall.isVideo ? { width: 640, height: 480, facingMode: currentFacingMode } : false
       });
       localVideo.srcObject = localStream;
       localVideo.classList.toggle('hidden', !activeCall.isVideo);
@@ -1064,6 +1081,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Update call status once remote stream is received
       callScreenStatus.textContent = 'Connected';
+      stopRingtone();
       startCallTimer();
     };
 
@@ -1107,10 +1125,15 @@ document.addEventListener('DOMContentLoaded', () => {
       remoteVideo.remove();
     }
     
-    // If no peers are left, reset status
+    // If no peers are left, end the call UI
     if (Object.keys(peerConnections).length === 0) {
-      callScreenStatus.textContent = 'Ringing...';
+      callScreenStatus.textContent = 'Call Ended';
       stopCallTimer();
+      setTimeout(() => {
+        if (activeCall) {
+          closeCallUI();
+        }
+      }, 2000);
     }
   }
 
@@ -1132,6 +1155,68 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleVideoBtn.classList.toggle('active', videoTrack.enabled);
       toggleVideoBtn.title = videoTrack.enabled ? "Turn Off Camera" : "Turn On Camera";
       localVideo.classList.toggle('hidden', !videoTrack.enabled);
+      
+      // Disable swap camera button if camera is disabled
+      swapCameraBtn.disabled = !videoTrack.enabled;
+      swapCameraBtn.classList.toggle('disabled', !videoTrack.enabled);
+    }
+  }
+
+  async function swapCamera() {
+    if (!localStream || !activeCall || !activeCall.isVideo) return;
+
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    // Toggle facing mode
+    currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+
+    try {
+      // Disable button during transition
+      swapCameraBtn.disabled = true;
+
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { width: 640, height: 480, facingMode: currentFacingMode }
+      });
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (!newVideoTrack) throw new Error("No video track found in new stream");
+
+      // Stop old track
+      videoTrack.stop();
+      localStream.removeTrack(videoTrack);
+
+      // Add new track
+      localStream.addTrack(newVideoTrack);
+
+      // Reassign local stream to update video element
+      localVideo.srcObject = localStream;
+
+      // Replace track on all active peer connections
+      Object.keys(peerConnections).forEach(pId => {
+        const pc = peerConnections[pId];
+        const senders = pc.getSenders();
+        const videoSender = senders.find(sender => sender.track && sender.track.kind === 'video');
+        if (videoSender) {
+          videoSender.replaceTrack(newVideoTrack).catch(err => {
+            console.error("Failed to replace track for peer:", pId, err);
+          });
+        }
+      });
+
+      // Ensure local video element is visible and buttons are updated
+      localVideo.classList.remove('hidden');
+      toggleVideoBtn.classList.add('active');
+      toggleVideoBtn.title = "Turn Off Camera";
+
+    } catch (err) {
+      console.error("Error swapping camera:", err);
+      alert("Failed to swap camera: " + err.message);
+      // Revert facing mode state
+      currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+    } finally {
+      swapCameraBtn.disabled = false;
     }
   }
 
@@ -1167,6 +1252,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset controls UI classes
     toggleAudioBtn.classList.add('active');
     toggleVideoBtn.classList.add('active');
+    swapCameraBtn.classList.add('active');
+    swapCameraBtn.disabled = false;
+    swapCameraBtn.classList.remove('disabled');
 
     // Hide screen
     callOverlay.classList.add('hidden');
