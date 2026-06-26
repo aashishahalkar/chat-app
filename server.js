@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 3000;
 // Static user list
 const users = [
   { username: "jenish", password: "123456", name: "Jenish" },
+  { username: "sk", password: "sk@123", name: "SK" },
   { username: "aashish", password: "123456", name: "Aashish" },
   { username: "admin", password: "admin123", name: "Administrator" }
 ];
