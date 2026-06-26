@@ -27,7 +27,12 @@
 
       <div class="input-group">
         <label for="password">Password</label>
-        <input type="password" id="password" placeholder="Enter password" required autocomplete="off">
+        <div class="password-wrapper">
+          <input type="password" id="password" placeholder="Enter password" required autocomplete="off">
+          <button type="button" id="togglePasswordBtn" class="toggle-password-btn" title="Toggle Password Visibility">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
       </div>
 
       <button type="submit" class="btn-primary">
