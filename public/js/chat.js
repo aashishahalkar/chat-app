@@ -1011,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localVideo.classList.add('hidden');
       } catch (e) {
         alert("Could not access microphone. Call terminated.");
-        socket.emit('rejectCall', { to: activeCall.targetId, isGroup: activeCall.isGroup });
+        socket.emit('rejectCall', { to: activeCall.isGroup ? activeCall.callRoom : activeCall.targetId, isGroup: activeCall.isGroup });
         closeCallUI();
         return;
       }
@@ -1019,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Accept call socket event
     socket.emit('acceptCall', {
-      to: activeCall.targetId,
+      to: activeCall.isGroup ? activeCall.callRoom : activeCall.targetId,
       isGroup: activeCall.isGroup
     });
   }
@@ -1030,7 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!activeCall) return;
 
     socket.emit('rejectCall', {
-      to: activeCall.targetId,
+      to: activeCall.isGroup ? activeCall.callRoom : activeCall.targetId,
       isGroup: activeCall.isGroup
     });
     activeCall = null;
@@ -1139,7 +1139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!activeCall) return;
 
     socket.emit('endCall', {
-      to: activeCall.targetId,
+      to: activeCall.isGroup ? activeCall.callRoom : activeCall.targetId,
       isGroup: activeCall.isGroup
     });
 
