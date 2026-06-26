@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect - Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-body">
+  <div class="login-container">
+    <div class="login-header">
+      <div class="logo-icon">💬</div>
+      <h1>Connect</h1>
+      <p>Real-time One-to-One Secure Chat</p>
+    </div>
+
+    <form id="loginForm" class="login-form">
+      <div id="errorMessage" class="error-message hidden"></div>
+      
+      <div class="input-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter username (e.g. jenish)" required autocomplete="off">
+      </div>
+
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter password" required autocomplete="off">
+      </div>
+
+      <button type="submit" class="btn-primary">
+        <span>Log In</span>
+        <div class="spinner hidden" id="loginSpinner"></div>
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p>Try usernames: <strong>jenish</strong>, <strong>aashish</strong>, or <strong>admin</strong></p>
+    </div>
+  </div>
+
+  <script src="/js/login.js"></script>
+</body>
+</html>
